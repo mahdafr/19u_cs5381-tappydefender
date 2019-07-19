@@ -9,7 +9,7 @@ import android.view.SurfaceView;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import edu.utep.cs5381.tappydefender.ui.tdmanager.*;
-import edu.utep.cs5381.tappydefender.ui.tdgameobject.*;
+import edu.utep.cs5381.tappydefender.tdgameobject.*;
 
 public class TDView extends SurfaceView implements Runnable {
     private Context context;
@@ -24,6 +24,7 @@ public class TDView extends SurfaceView implements Runnable {
     private SurfaceHolder holder;
     private SharedPreferences prefs;
     private SharedPreferences.Editor editor;
+    private PauseButton pauseButton;
 
     private Player player;
     private List<Enemy> enemy = new CopyOnWriteArrayList<>();
@@ -37,6 +38,7 @@ public class TDView extends SurfaceView implements Runnable {
         editor = prefs.edit();
         fastestTime = prefs.getLong("FastestTime",1000000);
         TDM = new TDManager(context,x,y);
+        pauseButton = new PauseButton(x,y);
         startGame();
     }
 
@@ -65,9 +67,14 @@ public class TDView extends SurfaceView implements Runnable {
     public boolean onTouchEvent(MotionEvent motionEvent) {
         switch (motionEvent.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
-                player.setBoosting(true);
-                if ( gameEnded )
-                    startGame();
+                if ( pauseButton.isClicked(motionEvent.getX(),motionEvent.getY()) ) {
+                    if ( playing ) pause();
+                    else resume();
+                } else {
+                    player.setBoosting(true);
+                    if (gameEnded)
+                        startGame();
+                }
                 break;
             case MotionEvent.ACTION_UP:
                 player.setBoosting(false);
@@ -84,6 +91,7 @@ public class TDView extends SurfaceView implements Runnable {
             //draw the background, Ships, SpaceDust and text on game state data
             drawGameObjects(canvas);
             drawStateData(canvas);
+            drawButton(canvas);
             if ( gameEnded ) //draw Game Over screen
                 drawGameOver(canvas);
 
@@ -113,6 +121,22 @@ public class TDView extends SurfaceView implements Runnable {
         canvas.drawText("Distance: " +distanceRemaining/1000+ " KM", width, height-yy, TDM.textCenter());
 
         canvas.drawText("Speed: " +player.speed()*60+ " MPS", width*2-275, height-yy, TDM.textRight());
+    }
+
+    private void drawButton(Canvas canvas) {
+        int mid = (pauseButton.left()+pauseButton.right())/2;
+        int skip = 15;
+        int top = pauseButton.top() + skip;
+        int bottom = pauseButton.bottom() - skip;
+        if ( playing ) {
+            canvas.drawRect(mid - 2 * skip, top, mid - skip, bottom, TDM.buttonPaint());
+            canvas.drawRect(mid + skip, top, mid + 2 * skip, bottom, TDM.buttonPaint());
+        } else {
+            int midY = (top+bottom)/2;
+            canvas.drawLine(mid-2*skip,top,mid+2*skip,midY,TDM.buttonPaint());
+            canvas.drawLine(mid-2*skip,bottom,mid+2*skip,midY,TDM.buttonPaint());
+            canvas.drawLine(mid-2*skip,top,mid-2*skip,bottom,TDM.buttonPaint());
+        }
     }
 
     private void drawGameOver(Canvas canvas) {

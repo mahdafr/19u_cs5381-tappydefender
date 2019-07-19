@@ -1,10 +1,7 @@
-package edu.utep.cs5381.tappydefender.ui.tdgameobject;
+package edu.utep.cs5381.tappydefender.tdgameobject;
 
 import android.content.Context;
-import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Rect;
-import android.view.Gravity;
 
 import edu.utep.cs5381.tappydefender.R;
 

@@ -1,4 +1,4 @@
-package edu.utep.cs5381.tappydefender.ui.tdgameobject;
+package edu.utep.cs5381.tappydefender.tdgameobject;
 
 import java.util.Random;
 

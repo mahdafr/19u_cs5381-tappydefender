@@ -58,6 +58,7 @@ public class TDManager {
     public Paint dustPaint() {
         return paints.dustPaint();
     }
+    public Paint buttonPaint() { return paints.buttonPaint(); }
     public Paint textLeft() {
         Paint t = paints.textPaint();
         t.setTextAlign(Paint.Align.LEFT);

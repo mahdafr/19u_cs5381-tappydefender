@@ -11,6 +11,7 @@ class PaintManager {
     private Paint ship;
     private Paint dust;
     private Paint text;
+    private Paint button;
     private final int textSize = 48;
     private final int strokeW = 4;
 
@@ -22,6 +23,10 @@ class PaintManager {
         text.setColor(textColor);
         text.setStrokeWidth(strokeW);
         text.setTextSize(textSize);
+        button = new Paint();
+        button.setColor(Color.WHITE);
+        button.setStyle(Paint.Style.STROKE);
+        button.setStrokeWidth(5);
     }
 
     /* ************************ Getters ************************ */
@@ -41,5 +46,8 @@ class PaintManager {
     Paint textPaint() {
         text.setColor(textColor);
         return text;
+    }
+    Paint buttonPaint() {
+        return button;
     }
 }
