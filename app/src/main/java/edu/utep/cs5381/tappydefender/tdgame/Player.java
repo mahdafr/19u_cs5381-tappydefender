@@ -1,4 +1,4 @@
-package edu.utep.cs5381.tappydefender.tdgameobject;
+package edu.utep.cs5381.tappydefender.tdgame;
 
 import android.content.Context;
 import android.graphics.BitmapFactory;
@@ -15,10 +15,11 @@ public class Player extends Ship {
     private final int decelerate = 5;
     private final int minSpeed = 1;
     private final int maxSpeed = minSpeed*20;
-    private int shields = 3;
+    private int shields;
 
     public Player(Context context, int screenX, int screenY) {
         super();
+        shields = 3;
         x = 50;
         y = 50;
         speed = minSpeed;
@@ -67,5 +68,9 @@ public class Player extends Ship {
 
     public int shieldsRemaining() {
         return (shields<=0) ? 0 : shields;
+    }
+
+    public void addShield() {
+        shields++;
     }
 }

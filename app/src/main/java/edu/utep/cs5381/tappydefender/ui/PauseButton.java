@@ -18,21 +18,7 @@ class PauseButton {
     }
 
     /* **************** Listener/Event Handling Methods **************** */
-    public interface ButtonListener {
-        void onClick();
-    }
-
-    private ButtonListener listener;
-
-    /**
-     * Create the listener for events on this PauseButton.
-     * @param l the ButtonListener for events
-     */
-    public void setListener(ButtonListener l) {
-        listener = l;
-    }
-
-    /**
+        /**
      * Checks if the Button was clicked to handle the event.
      * @param x the x-coordinate whether the TouchEvent occurred
      * @param y the y-coordinate whether the TouchEvent occurred

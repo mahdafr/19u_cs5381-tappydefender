@@ -1,4 +1,4 @@
-package edu.utep.cs5381.tappydefender.tdgameobject;
+package edu.utep.cs5381.tappydefender.tdgame;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -12,6 +12,7 @@ import edu.utep.cs5381.tappydefender.R;
 public class Enemy extends Ship {
     private static final Random rng = new Random();
     private Context context;
+    private boolean hasMagic;
 
     public Enemy(Context c, int screenX, int screenY) {
         context = c;
@@ -23,6 +24,7 @@ public class Enemy extends Ship {
         x = screenX;
         y = rng.nextInt(maxY) - bitmap.getHeight();
         super.setCollisionBox();
+        hasMagic = false;
     }
 
     private void setBitmap(Context c) {
@@ -54,12 +56,25 @@ public class Enemy extends Ship {
         x -= s;
         x -= speed;
         if ( x<minX - bitmap.getWidth() ) {
-            setBitmap(context);
-            scaleBitmap(x);
+            if ( !hasMagic ) { //don't randomize image
+                setBitmap(context);
+                scaleBitmap(x);
+            }
             speed = rng.nextInt(10)+10;
             x = maxX;
             y = rng.nextInt(maxY) - bitmap.getHeight();
         }
         super.update();
+    }
+
+    //there can be only one
+    public void hasMagic(Context c, int x) {
+        bitmap = BitmapFactory.decodeResource(c.getResources(), R.drawable.enemy0);
+        hasMagic = true;
+        bitmap = Bitmap.createScaledBitmap(bitmap,(bitmap.getWidth() / 15),(bitmap.getHeight() / 15), false);
+    }
+
+    public boolean givesLife() {
+        return hasMagic;
     }
 }

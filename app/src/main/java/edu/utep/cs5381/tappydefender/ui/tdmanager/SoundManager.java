@@ -13,6 +13,7 @@ class SoundManager {
         START(R.raw.start),
         BUMP(R.raw.bump),
         DESTROYED(R.raw.destroyed),
+        HEART(R.raw.heart),
         WIN(R.raw.win);
 
         public final int resourceId;

@@ -33,6 +33,9 @@ public class TDManager {
     public void playBump() {
         sound.play(SoundManager.Sound.BUMP);
     }
+    public void playHeart() {
+        sound.play(SoundManager.Sound.HEART);
+    }
     public void playWin() {
         sound.play(SoundManager.Sound.WIN);
     }

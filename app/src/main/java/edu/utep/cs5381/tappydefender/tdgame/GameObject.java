@@ -1,4 +1,4 @@
-package edu.utep.cs5381.tappydefender.tdgameobject;
+package edu.utep.cs5381.tappydefender.tdgame;
 
 /**
  * Every Game Object in the gameplay.

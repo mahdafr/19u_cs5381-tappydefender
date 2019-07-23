@@ -6,29 +6,21 @@ import android.graphics.Canvas;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
+
+import edu.utep.cs5381.tappydefender.tdgame.*;
 import edu.utep.cs5381.tappydefender.ui.tdmanager.*;
-import edu.utep.cs5381.tappydefender.tdgameobject.*;
 
 public class TDView extends SurfaceView implements Runnable {
     private Context context;
     private Thread gameThread;
     private TDManager TDM; //manager for paints, parameters, and sound
-    private boolean playing;
-    private float distanceRemaining;
-    private long timeTaken;
-    private long timeStarted;
-    private long fastestTime;
-    private boolean gameEnded;
+    private TDGame game;
     private SurfaceHolder holder;
     private SharedPreferences prefs;
     private SharedPreferences.Editor editor;
     private PauseButton pauseButton;
 
-    private Player player;
-    private List<Enemy> enemy = new CopyOnWriteArrayList<>();
-    private List<SpaceDust> dust = new CopyOnWriteArrayList<>();
+    private boolean gotLife;
 
     public TDView(Context c, int x, int y) {
         super(c);
@@ -36,31 +28,21 @@ public class TDView extends SurfaceView implements Runnable {
         holder = getHolder();
         prefs = context.getSharedPreferences("HiScores",context.MODE_PRIVATE);
         editor = prefs.edit();
-        fastestTime = prefs.getLong("FastestTime",1000000);
         TDM = new TDManager(context,x,y);
         pauseButton = new PauseButton(x,y);
+        game = new TDGame(context,x,y);
         startGame();
     }
 
+    /**
+     * (re)Starts the TappyDefender game: reset the gameobjects and fastest time.
+     */
     private void startGame() {
+        gotLife = false;
         TDM.reset();
         int x = TDM.width(), y = TDM.height();
-        //reset game objects in the scene
-        player = new Player(context,x,y);
-        enemy.clear();
-        dust.clear();
-        int i = 0;
-        if ( x>1000 ) i--;
-        if ( x>1200 ) i--;
-        for ( ; i<TDM.getInt(5) ; i++ )
-            enemy.add(new Enemy(context, x, y));
-        for ( i=0 ; i<TDM.getInt(55) ; i++ )
-            dust.add(new SpaceDust(x,y));
-        //reset trackers
-        distanceRemaining = 10000; // 10 km
-        timeTaken = 0;
-        timeStarted = System.currentTimeMillis();
-        gameEnded = false;
+        game.reset(x,y);
+        game.setFastestTime(prefs.getLong("FastestTime",1000000));
     }
 
     @Override
@@ -68,16 +50,22 @@ public class TDView extends SurfaceView implements Runnable {
         switch (motionEvent.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
                 if ( pauseButton.isClicked(motionEvent.getX(),motionEvent.getY()) ) {
-                    if ( playing ) pause();
-                    else resume();
+                    if ( pauseButton.isActive() ) {
+                        draw();
+                        game.pause();
+                        pause();
+                    } else {
+                        game.resume();
+                        resume();
+                    }
                 } else {
-                    player.setBoosting(true);
-                    if (gameEnded)
+                    game.boost();
+                    if ( game.ended() )
                         startGame();
                 }
                 break;
             case MotionEvent.ACTION_UP:
-                player.setBoosting(false);
+                game.stopBoost();
                 break;
         }
         return true;
@@ -91,44 +79,64 @@ public class TDView extends SurfaceView implements Runnable {
             //draw the background, Ships, SpaceDust and text on game state data
             drawGameObjects(canvas);
             drawStateData(canvas);
-            drawButton(canvas);
-            if ( gameEnded ) //draw Game Over screen
+            if ( game.ended() ) //draw Game Over screen
                 drawGameOver(canvas);
+            else
+                drawButton(canvas);
 
             holder.unlockCanvasAndPost(canvas);
         }
     }
 
+    /**
+     * Draws the Player and Enemy ships, and SpaceDust, in their updated locations.
+     * @param canvas to draw on
+     */
     private void drawGameObjects(Canvas canvas) {
+        Player p = game.player();
         canvas.drawColor(TDM.backgroundColor());
-        canvas.drawBitmap(player.bitmap(),player.X(),player.Y(),TDM.shipPaint());
-        for ( Enemy e : enemy )
+        canvas.drawBitmap(p.bitmap(),p.X(),p.Y(),TDM.shipPaint());
+        for ( Enemy e : game.enemies() )
             canvas.drawBitmap(e.bitmap(), e.X(), e.Y(),TDM.shipPaint());
-        for ( SpaceDust d : dust )
+        for ( SpaceDust d : game.dust() )
             canvas.drawPoint(d.X(),d.Y(),TDM.dustPaint());
     }
 
+    /**
+     * Draws the game's state: player's shield, time elapsed, fastest time, and distance remaining.
+     * @param canvas to draw on
+     */
     private void drawStateData(Canvas canvas) {
         int yy = 50;
         int height = TDM.height();
         int width = TDM.width()/2;
+        long fastestTime = game.fastestTime();
+        int playerShields = game.player().shieldsRemaining();
+        int playerSpeed = game.player().speed();
+        long timeTaken = game.elapsedTime();
+        float distanceRemaining = game.distanceRemaining();
+
         if ( fastestTime==Long.MAX_VALUE )
             canvas.drawText("Fastest: --", 10, yy, TDM.textLeft());
         else
             canvas.drawText(formatTime("Fastest", fastestTime), 10, yy, TDM.textLeft());
-        canvas.drawText("Shield: " +player.shieldsRemaining(), 10, height-yy, TDM.textLeft());
+        canvas.drawText("Shield: " +playerShields, 10, height-yy, TDM.textLeft());
         canvas.drawText(formatTime("Time", timeTaken), width, yy, TDM.textCenter());
         canvas.drawText("Distance: " +distanceRemaining/1000+ " KM", width, height-yy, TDM.textCenter());
 
-        canvas.drawText("Speed: " +player.speed()*60+ " MPS", width*2-275, height-yy, TDM.textRight());
+        canvas.drawText("Speed: " +playerSpeed*60+ " MPS", width*2-275, height-yy, TDM.textRight());
     }
 
+    /**
+     * Draws the Pause/Play button depending on game state.
+     * @param canvas to draw on
+     */
     private void drawButton(Canvas canvas) {
         int mid = (pauseButton.left()+pauseButton.right())/2;
         int skip = 15;
         int top = pauseButton.top() + skip;
         int bottom = pauseButton.bottom() - skip;
-        if ( playing ) {
+        if ( !pauseButton.isActive() ) {
             canvas.drawRect(mid - 2 * skip, top, mid - skip, bottom, TDM.buttonPaint());
             canvas.drawRect(mid + skip, top, mid + 2 * skip, bottom, TDM.buttonPaint());
         } else {
@@ -139,9 +147,16 @@ public class TDView extends SurfaceView implements Runnable {
         }
     }
 
+    /**
+     * Draws the Game Over/Restart screen.
+     * @param canvas to draw on
+     */
     private void drawGameOver(Canvas canvas) {
         int x = TDM.width()/2;
         int y = TDM.height()/2;
+        long fastestTime = game.fastestTime();
+        float distanceRemaining = game.distanceRemaining();
+
         canvas.drawText("Game Over",x,y-150,TDM.endTextTitleRed());
         canvas.drawText(formatTime("Fastest Time",fastestTime),x,y+20,TDM.textCenter());
         canvas.drawText("Distance remaining: " +(distanceRemaining/1000)+ " km",x,y+70,TDM.textCenter());
@@ -161,7 +176,7 @@ public class TDView extends SurfaceView implements Runnable {
     /* ************************ Thread Control Methods ************************ */
     @Override
     public void run() {
-        while ( playing ) {
+        while ( game.isPlaying() ) {
             update();
             draw();
             control();
@@ -169,7 +184,7 @@ public class TDView extends SurfaceView implements Runnable {
     }
 
     public void pause() {
-        playing = false;
+        game.pausePlaying();
         try {
             gameThread.join();
         } catch (InterruptedException e) {
@@ -178,54 +193,72 @@ public class TDView extends SurfaceView implements Runnable {
     }
 
     public void resume() {
-        playing = true;
+        game.continuePlaying();
         gameThread = new Thread(this);
         gameThread.start();
     }
 
     private void update() {
-        for ( SpaceDust d : dust )
-            d.update(player.speed());
+        for ( SpaceDust d : game.dust() )
+            d.update(game.player().speed());
         if ( updateEnemies() )
             playerHit();
-        if ( !gameEnded ) {
-            distanceRemaining -= player.speed();
-            timeTaken = System.currentTimeMillis()-timeStarted;
+        if ( !game.ended() ) {
+            game.update();
         }
-        if ( distanceRemaining<0 )
+        if ( game.distanceRemaining()<0 )
             playerWon();
-        player.update();
+        game.player().update();
     }
 
+    /**
+     * Updates the enemies' locations in the game.
+     * @return whether the player hit an enemy
+     */
     private boolean updateEnemies() {
         boolean flag = false;
-        for ( Enemy e: enemy ) {
+        for ( Enemy e: game.enemies() ) {
             //if Player hits an Enemy, enemy dies and Player loses a shield
-            if ( android.graphics.Rect.intersects(player.collisionBox(),e.collisionBox()) ) {
+            if ( android.graphics.Rect.intersects(game.player().collisionBox(),e.collisionBox()) ) {
                 e.setX(-e.bitmap().getWidth());
                 flag = true;
+                gotLife = e.givesLife();
             }
-            e.update(player.speed());
+            e.update(game.player().speed());
         }
         return flag;
     }
 
+    /**
+     * Plays the appropriate sound when the player hit a ship or heart.
+     */
     private void playerHit() {
-        if ( player.loseShield() ) {
-            TDM.playDestroyed();
-            gameEnded = true; //end the game
-        } else TDM.playBump();
+        if ( gotLife ) {
+            game.player().addShield();
+            TDM.playHeart();
+        } else {
+            if ( game.player().loseShield() ) {
+                TDM.playDestroyed();
+                game.isOver(); //end the game
+            } else TDM.playBump();
+        }
+        gotLife = false; //reset
     }
 
+    /**
+     * Ends the game on a Player's win.
+     */
     private void playerWon() {
+        game.isOver(); //end the game
         TDM.playWin() ;
-        if ( timeTaken<fastestTime ) {
-            editor.putLong("FastestTime",timeTaken);
+        long elapsed = game.elapsedTime();
+        long fastest = game.fastestTime();
+        if ( elapsed<fastest ) {
+            editor.putLong("FastestTime",elapsed);
             editor.commit();
-            fastestTime = timeTaken;
+            game.setFastestTime(elapsed);
         }
-        distanceRemaining = 0;
-        gameEnded = true; //end the game
+        game.setDistanceRemaining(0);
     }
 
     /**

@@ -1,4 +1,4 @@
-package edu.utep.cs5381.tappydefender.tdgameobject;
+package edu.utep.cs5381.tappydefender.tdgame;
 
 import android.graphics.Bitmap;
 import android.graphics.Rect;
